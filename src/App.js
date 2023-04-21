@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./App.css";
 import "@aws-amplify/ui-react/styles.css";
-import { API, Storage } from "aws-amplify";
+import { API, Storage } from 'aws-amplify';
 import {
   Button,
   Flex,
@@ -11,7 +11,8 @@ import {
   TextField,
   View,
   withAuthenticator,
-} from "@aws-amplify/ui-react";
+} from '@aws-amplify/ui-react';
+
 import { listNotes } from "./graphql/queries";
 import {
   createNote as createNoteMutation,
@@ -19,34 +20,35 @@ import {
 } from "./graphql/mutations";
 
 const App = ({ signOut }) => {
-  const [notes, setNotes] = useState([]);
+  const [items, setItems] = useState([]);
 
   useEffect(() => {
-    fetchNotes();
+    fetchItems();
   }, []);
 
-  async function fetchNotes() {
+  async function fetchItems() {
     const apiData = await API.graphql({ query: listNotes });
-    const notesFromAPI = apiData.data.listNotes.items;
+    const itemsFromAPI = apiData.data.listNotes.items;
     await Promise.all(
-      notesFromAPI.map(async (note) => {
-        if (note.image) {
-          const url = await Storage.get(note.name);
-          note.image = url;
+      itemsFromAPI.map(async (item) => {
+        if (item.image) {
+          const url = await Storage.get(item.name);
+          item.image = url;
         }
-        return note;
+        return item;
       })
     );
-    setNotes(notesFromAPI);
+    setItems(itemsFromAPI);
   }
 
-  async function createNote(event) {
+  async function createItem(event) {
     event.preventDefault();
     const form = new FormData(event.target);
     const image = form.get("image");
     const data = {
       name: form.get("name"),
       description: form.get("description"),
+      price: form.get("price"),
       image: image.name,
     };
     if (!!data.image) await Storage.put(data.name, image);
@@ -54,13 +56,14 @@ const App = ({ signOut }) => {
       query: createNoteMutation,
       variables: { input: data },
     });
-    fetchNotes();
+    fetchItems();
     event.target.reset();
   }
+  
 
-  async function deleteNote({ id, name }) {
-    const newNotes = notes.filter((note) => note.id !== id);
-    setNotes(newNotes);
+  async function deleteItem({ id, name }) {
+    const newItems = items.filter((item) => item.id !== id);
+    setItems(newItems);
     await Storage.remove(name);
     await API.graphql({
       query: deleteNoteMutation,
@@ -68,66 +71,81 @@ const App = ({ signOut }) => {
     });
   }
 
+
   return (
     <View className="App">
-      <Heading level={1}>My Notes App</Heading>
-      <View as="form" margin="3rem 0" onSubmit={createNote}>
+      <Heading level={1}>FoodsList</Heading>
+      <View as="form" margin="3rem 0" onSubmit={createItem}>
         <Flex direction="row" justifyContent="center">
           <TextField
             name="name"
-            placeholder="Note Name"
-            label="Note Name"
+            placeholder="Name"
+            label="Name"
             labelHidden
             variation="quiet"
             required
           />
           <TextField
             name="description"
-            placeholder="Note Description"
-            label="Note Description"
+            placeholder="Description"
+            label="Description"
             labelHidden
             variation="quiet"
             required
           />
-          <input
+           <TextField
+            name="price"
+            placeholder="Price"
+            label="Price"
+            labelHidden
+            variation="quiet"
+            required
+          />
+          <View
             name="image"
+            as="input"
             type="file"
             style={{ alignSelf: "end" }}
           />
           <Button type="submit" variation="primary">
-            Create Note
+            Add Item
           </Button>
         </Flex>
       </View>
-      <Heading level={2}>Current Notes</Heading>
+      <Heading level={2}>Cart</Heading>
       <View margin="3rem 0">
-        {notes.map((note) => (
+        {items.map((item) => (
           <Flex
-            key={note.id || note.name}
+            key={item.id || item.name}
             direction="row"
             justifyContent="center"
             alignItems="center"
           >
             <Text as="strong" fontWeight={700}>
-              {note.name}
+              {item.name}
             </Text>
-            <Text as="span">{note.description}</Text>
-            {note.image && (
+            <Text as="span">{item.description}</Text>
+            <Text as="span">{item.price}</Text>
+            {item.image && (
               <Image
-                src={note.image}
-                alt={`visual aid for ${note.name}`}
-                style={{ width: 400 }}
-              />
-            )}
-            <Button variation="link" onClick={() => deleteNote(note)}>
-              Delete note
-            </Button>
-          </Flex>
-        ))}
-        </View>
-        <Button onClick={signOut}>Sign Out</Button>
-      </View>
-    );
-  };
-  
-  export default withAuthenticator(App);
+                src={item.image}
+                alt={`visualrepresentation of ${item.name}`}
+                style={{width:400}}
+                />
+                )}
+                <Button
+                type="button"
+                variation="danger"
+                onClick={() => deleteItem(item)}
+                >
+                Delete
+                </Button>
+                </Flex>
+                ))}
+                </View>
+                <Button onClick={signOut}>Sign Out</Button>
+                </View>
+                );
+                };
+                
+                export default withAuthenticator(App);
